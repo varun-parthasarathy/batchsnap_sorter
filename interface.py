@@ -5,6 +5,7 @@ import os
 import sys
 from processing import *
 from shutil import copy
+import threading
 
 
 class PictureSorter(QWidget):
@@ -56,9 +57,45 @@ class PictureSorter(QWidget):
             pass
         else:
             identifier = FaceIdentifier(self.image_path)
-            results = identifier.load_images(self.folder)
+            image_list = identifier.get_image_list(self.folder)
+            image_list.sort()
+            print(image_list)
+            results = list()
+            print(len(image_list))
+            start = 0
+            if len(image_list) > 64:
+                batch_size = 64
+            elif len(image_list) > 8:
+                batch_size = 8
+            else:
+                batch_size = 1
+            end = batch_size
+            cycles = (int(len(image_list)/batch_size)) + 1
+            print(batch_size)
+            print(cycles)
+            for i in range(cycles):
+                print("Cycle ", i)
+                print("Start : ", start, "End : ", end)
+                threadlist = list()
+                temp = image_list[start:end]
+                for path in temp:
+                    thread = threading.Thread(target = identifier.encode_faces, kwargs = {'path': path, 'result': results})
+                    thread.start()
+                    threadlist.append(thread)
+                for thread in threadlist:
+                    thread.join()
+                if end is None:
+                    break
+                if i == cycles - 2:
+                    start = end
+                    end = None
+                else:
+                    start = start + batch_size
+                    end = end + batch_size
+            #results = identifier.load_images(self.folder)
             if not os.path.exists("__sorted_images__"):
                 os.makedirs("__sorted_images__")
+            results.sort()
             for image in results:
                 copy(image, "__sorted_images__")
 

@@ -6,4 +6,4 @@ The user must select a photo that clearly displays their face, and then select t
 Once this is done, the app will sort the photos and copy them to a temporary folder in the same path as the app itself.
 
 The app uses the face_recognition module, which in turn uses dlib, allowing the accuracy of the sorting to be over 95%.
-The sorting is however still time-consuming, and therefore plans are being made to use multithreading to allow for quicker sorting.
+The sorting currently uses multi-threading to speed it up, however plans are being made to use multi-processing instead.

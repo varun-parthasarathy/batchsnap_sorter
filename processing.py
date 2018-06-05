@@ -8,21 +8,9 @@ import numpy as np
 
 class FaceIdentifier(object):
 
-    def __init__(self, test_image_path=None, tolerance=0.6):
-        try:
-            test_image = Image.open(test_image_path)
-        except:
-            print("Error - Specified image does not exist")
-            sys.exit(0)
-        size = test_image.size
-        test_image = test_image.resize((int(size[0]*0.25), int(size[1]*0.25)),
-                                       Image.ANTIALIAS)
-        test_image = np.array(test_image)
-        self.test_locations = FR.face_locations(test_image,
-                                                number_of_times_to_upsample=1,
-                                                model="hog")
+    def __init__(self, test_image=None, locations=None, tolerance=0.6):
         self.test_encoding = FR.face_encodings(test_image,
-                                               self.test_locations)[0]
+                                               locations)[0]
         self.result_images = list()
         self.tolerance = tolerance
 

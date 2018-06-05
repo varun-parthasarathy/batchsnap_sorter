@@ -6,6 +6,9 @@ import sys
 from processing import *
 from shutil import copy
 import threading
+import face_recognition as FR
+from PIL import Image
+import numpy as np
 
 
 class PictureSorter(QWidget):
@@ -91,10 +94,27 @@ class PictureSorter(QWidget):
         elif self.textbox.text() == "":
             pass
         else:
+            try:
+                test_image = Image.open(self.image_path)
+            except:
+                print("Error - Specified image does not exist")
+                sys.exit(0)
+            size = test_image.size
+            test_image = test_image.resize((int(size[0]*0.25), int(size[1]*0.25)),
+                                           Image.ANTIALIAS)
+            test_image = np.array(test_image)
+            locations = FR.face_locations(test_image,
+                                               number_of_times_to_upsample=1,
+                                               model="hog")
+            if len(locations) < 1:
+                print("There were no detectable faces in the image")
+                sys.exit(0)
             complete = 0
             self.progress.setValue(complete)
             self.tolerance = float(self.textbox.text())
-            identifier = FaceIdentifier(self.image_path, self.tolerance)
+            identifier = FaceIdentifier(test_image,
+                                        locations,
+                                        self.tolerance)
             image_list = identifier.get_image_list(self.folder)
             image_list.sort()
             increment = float(100.00/float(len(image_list)))

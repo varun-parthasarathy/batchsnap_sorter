@@ -39,7 +39,7 @@ class FaceIdentifier(object):
         if len(list_of_faces) < 1:
             return False
         result = FR.compare_faces(list_of_faces, self.test_encoding,
-                                  tolerance=0.5)
+                                  tolerance=0.6)
         if True in result:
             self.result_images.append(path)
             return True

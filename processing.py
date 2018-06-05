@@ -1,18 +1,22 @@
 import face_recognition as FR
 import os
 import glob
+import sys
 from PIL import Image
 import numpy as np
 
 
 class FaceIdentifier(object):
 
-    def __init__(self, test_image_path = None):
-        test_image = Image.open(test_image_path)
+    def __init__(self, test_image_path=None, tolerance=0.6):
+        try:
+            test_image = Image.open(test_image_path)
+        except:
+            print("Error - Specified image does not exist")
+            sys.exit(0)
         size = test_image.size
         test_image = test_image.resize((int(size[0]*0.25), int(size[1]*0.25)),
                                        Image.ANTIALIAS)
-        #test_image = test_image.convert('L')
         test_image = np.array(test_image)
         self.test_locations = FR.face_locations(test_image,
                                                 number_of_times_to_upsample=1,
@@ -20,13 +24,17 @@ class FaceIdentifier(object):
         self.test_encoding = FR.face_encodings(test_image,
                                                self.test_locations)[0]
         self.result_images = list()
+        self.tolerance = tolerance
 
     def encode_faces(self, path):
-        image = Image.open(path)
+        try:
+            image = Image.open(path)
+        except:
+            print("Error - Specified image does not exist")
+            return
         size = image.size
         image = image.resize((int(size[0]*0.25), int(size[1]*0.25)),
                                        Image.ANTIALIAS)
-        #image = image.convert('L')
         image = np.array(image)
         locs = FR.face_locations(image,
                                  number_of_times_to_upsample=1,
@@ -39,7 +47,7 @@ class FaceIdentifier(object):
         if len(list_of_faces) < 1:
             return False
         result = FR.compare_faces(list_of_faces, self.test_encoding,
-                                  tolerance=0.6)
+                                  tolerance=self.tolerance)
         if True in result:
             self.result_images.append(path)
             return True
@@ -47,11 +55,16 @@ class FaceIdentifier(object):
             return False
 
     def get_results(self):
-        return self.result_images
+        results = self.result_images
+        self.result_images = list()
+        return results
 
     def get_image_list(self, folder_path):
         images_list = list()
-        for path in glob.glob(os.path.join(folder_path, "*.jpg")):
-            images_list.append(path)
+        try:
+            for path in glob.glob(os.path.join(folder_path, "*.jpg")):
+                images_list.append(path)
+        except:
+            print("Error - folder or file path is invalid")
+            sys.exit(0)
         return images_list
-            

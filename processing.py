@@ -46,7 +46,6 @@ class KNNSorter(object):
                                     (0, 255, 0), 2)
                 f = cv2.resize(frame[y:y+h, x:x+w], (200, 200))
                 file = "/".join([personal_path, str(count)+".png"])
-                print(file)
                 cv2.imwrite(file, f)
                 count += 1
             cv2.imshow('Webcam Feed', frame)

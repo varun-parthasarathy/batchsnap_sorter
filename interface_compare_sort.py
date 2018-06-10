@@ -3,12 +3,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import os
 import sys
-from processing import *
 from shutil import copy
-import threading
 import face_recognition as FR
 from PIL import Image
 import numpy as np
+from processing import FaceIdentifier
 
 
 class PictureSorter(QWidget):

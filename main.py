@@ -61,7 +61,7 @@ class ImageSorter(QWidget):
 
     def generate_training_set(self):
         utils = IU()
-        uitls.generate_training_set()
+        utils.generate_training_set()
 
     def get_folder_path(self):
         folder_path = QFileDialog()

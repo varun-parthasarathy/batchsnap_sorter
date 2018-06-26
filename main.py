@@ -24,6 +24,7 @@ class ImageSorter(QWidget):
         self.model = 'models/predictor_euclidean_model.clf'
         self.textbox = None
         self.threshold = 0.6
+        self.detect_people = False
 
         self.label1 = QLabel()
         self.label2 = QLabel()
@@ -110,12 +111,20 @@ class ImageSorter(QWidget):
     def set_options(self):
         self.threshold = float(self.textbox.text())
 
+    def detecting_people(self, state):
+        if state == Qt.Checked:
+            self.detect_people = True
+        else:
+            self.detect_people = False
+
     def advanced_options(self):
         settings = QDialog()
         settings.setGeometry(500, 500, 300, 300)
         self.textbox = QLineEdit()
         label = QLabel()
         valid = QDoubleValidator()
+        checker = QCheckBox('Filter images by detecting people first (beta)')
+        checker.stateChanged.connect(self.detecting_people)
         if self.algorithm == 'Euclidean Distance':
             valid.setRange(0.005, 1.00, 3)
             self.textbox.setValidator(valid)
@@ -136,6 +145,7 @@ class ImageSorter(QWidget):
         button2.clicked.connect(self.train_classifier)
         button3.clicked.connect(self.set_options)
         dialog = QVBoxLayout()
+        dialog.addWidget(checker)
         dialog.addWidget(label)
         dialog.addWidget(self.textbox)
         dialog.addWidget(button3)
@@ -157,13 +167,19 @@ class ImageSorter(QWidget):
             error.exec_()
         elif os.path.isfile(self.model):
             self.progress.setValue(0)
-            done = 0
-            self.status.setText('Sorting images...')
             self.identifier.set_folder(self.folder)
             image_list = self.identifier.get_image_list()
             image_list.sort()
-            increment = float(100.00/float(len(image_list)))
             results = list()
+            if self.detect_people is True:
+                self.status.setText('Filtering images...')
+                utils = IU()
+                image_list = utils.detect_people(image_list,
+                                                 bar=self.progress)
+            increment = float(100.00/float(len(image_list)))
+            self.progress.setValue(0)
+            done = 0
+            self.status.setText('Sorting images...')
             for image in image_list:
                 result = self.identifier.predict(image_path = image,
                                                  threshold = self.threshold)

@@ -78,4 +78,40 @@ class ImageUtilities(object):
                 break
         video_capture.release()
         cv2.destroyAllWindows()
-                
+
+    # Beta - filter images by detecting people first
+    def detect_people(self, image_list, conf=0.4, bar=None):
+        net = cv2.dnn.readNetFromCaffe('models/MNSSD_deploy.prototxt.txt',
+                                       'models/MNSSD_detector.caffemodel')
+        CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
+	"bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
+	"dog", "horse", "motorbike", "person", "pottedplant", "sheep",
+	"sofa", "train", "tvmonitor"]
+        results = list()
+        done = 0
+        increment = float(100.00/len(image_list))
+        if bar is not None:
+            bar.setValue(0)
+        for image_path in image_list:
+            image = cv2.imread(image_path)
+            (h, w) = image.shape[:2]
+            blob = cv2.dnn.blobFromImage(cv2.resize(image, (300, 300)),
+                                         0.007843,
+                                         (300, 300),
+                                         127.5)
+            net.setInput(blob)
+            detections = net.forward()
+            for i in range(0, detections.shape[2]):
+                confidence = detections[0, 0, i, 2]
+                if confidence > conf:
+                    idx = int(detections[0, 0, i, 1])
+                    if CLASSES[idx] == 'person':
+                        results.append(image_path)
+                        break
+            if bar is not None:
+                done += increment
+                bar.setValue(done)
+        if bar is not None:
+            bar.setValue(100)
+
+        return results

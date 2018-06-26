@@ -149,8 +149,6 @@ class EuclideanSorter(object):
             encodings = pickle.load(file)
         encodings = np.array(encodings)
         mean_encoding = encodings.mean(axis=0)
-        # Debug
-        print(mean_encoding)
         if model_save_path is not None:
             with open(model_save_path, 'wb') as file:
                 pickle.dump(mean_encoding, file)

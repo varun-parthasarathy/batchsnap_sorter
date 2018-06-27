@@ -23,8 +23,12 @@ class ImageSorter(QWidget):
         self.identifier = EuclideanSorter()
         self.model = 'models/predictor_euclidean_model.clf'
         self.textbox = None
+        self.confidence_box = None
         self.threshold = 0.6
-        self.detect_people = False
+        self.detect_objects = False
+        self.sort_state = True
+        self.confidence = 0.4
+        self.classes = list()
 
         self.label1 = QLabel()
         self.label2 = QLabel()
@@ -110,21 +114,62 @@ class ImageSorter(QWidget):
 
     def set_options(self):
         self.threshold = float(self.textbox.text())
+        self.confidence = float(self.confidence_box.text())
 
-    def detecting_people(self, state):
+    def detecting_objects(self, state, idx=15):
+        CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
+	"bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
+	"dog", "horse", "motorbike", "person", "pottedplant", "sheep",
+	"sofa", "train", "tvmonitor"]
         if state == Qt.Checked:
-            self.detect_people = True
+            self.detect_objects = True
+            self.classes.append(CLASSES[idx])
         else:
-            self.detect_people = False
+            try:
+                self.classes.remove(CLASSES[idx])
+            except:
+                pass
+            if len(self.classes) == 0:
+                self.detect_objects = False
 
     def advanced_options(self):
         settings = QDialog()
-        settings.setGeometry(500, 500, 300, 300)
+        settings.setGeometry(600, 600, 300, 300)
         self.textbox = QLineEdit()
+        self.confidence_box = QLineEdit()
+        conf_label = QLabel()
         label = QLabel()
         valid = QDoubleValidator()
-        checker = QCheckBox('Filter images by detecting people first (beta)')
-        checker.stateChanged.connect(self.detecting_people)
+        conf_val = QDoubleValidator()
+        conf_val.setRange(0.001, 1.00, 3)
+        self.confidence_box.setValidator(conf_val)
+        self.confidence_box.setText('0.4')
+        conf_label.setText('Enter the confidence level of object detection')
+        filter_label = QLabel()
+        filter_label.setText('Select the objects that will be used to filter images')
+        checker1 = QCheckBox('People')
+        checker1.stateChanged.connect(lambda *f: self.detecting_objects(idx=15,
+                                                                        state=checker1.checkState()))
+        checker2 = QCheckBox('Dogs')
+        checker2.stateChanged.connect(lambda *f: self.detecting_objects(idx=12,
+                                                                        state=checker2.checkState()))
+        checker3 = QCheckBox('Cats')
+        checker3.stateChanged.connect(lambda *f: self.detecting_objects(idx=8,
+                                                                        state=checker3.checkState()))
+        checker4 = QCheckBox('Cars')
+        checker4.stateChanged.connect(lambda *f: self.detecting_objects(idx=7,
+                                                                        state=checker4.checkState()))
+        checker5 = QCheckBox('Bicycles')
+        checker5.stateChanged.connect(lambda *f: self.detecting_objects(idx=2,
+                                                                        state=checker5.checkState()))
+        checker6 = QCheckBox('Bottles')
+        checker6.stateChanged.connect(lambda *f: self.detecting_objects(idx=5,
+                                                                        state=checker6.checkState()))
+        checker7 = QCheckBox('Motorbikes')
+        checker7.stateChanged.connect(lambda *f: self.detecting_objects(idx=14,
+                                                                        state=checker7.checkState()))
+        filter_check = QCheckBox('Filter images without sorting using face recognition')
+        filter_check.stateChanged.connect(self.set_sort_state)
         if self.algorithm == 'Euclidean Distance':
             valid.setRange(0.005, 1.00, 3)
             self.textbox.setValidator(valid)
@@ -140,15 +185,25 @@ class ImageSorter(QWidget):
         self.textbox.setText(str(self.threshold))
         button1 = QPushButton('Generate training data')
         button2 = QPushButton('Train classifier')
-        button3 = QPushButton('Set threshold')
+        button3 = QPushButton('Set threshold and confidence')
         button1.clicked.connect(self.generate_training_set)
         button2.clicked.connect(self.train_classifier)
         button3.clicked.connect(self.set_options)
         dialog = QVBoxLayout()
-        dialog.addWidget(checker)
+        dialog.addWidget(filter_label)
+        dialog.addWidget(checker1)
+        dialog.addWidget(checker2)
+        dialog.addWidget(checker3)
+        dialog.addWidget(checker4)
+        dialog.addWidget(checker5)
+        dialog.addWidget(checker6)
+        dialog.addWidget(checker7)
+        dialog.addWidget(conf_label)
+        dialog.addWidget(self.confidence_box)
         dialog.addWidget(label)
         dialog.addWidget(self.textbox)
         dialog.addWidget(button3)
+        dialog.addWidget(filter_check)
         dialog.addWidget(button1)
         dialog.addWidget(button2)
         settings.setWindowTitle('Advanced Options')
@@ -156,14 +211,20 @@ class ImageSorter(QWidget):
         settings.setWindowModality(Qt.ApplicationModal)
         settings.exec_()
 
+    def set_sort_state(self, state):
+        if state == Qt.Checked:
+            self.sort_state = False
+        else:
+            self.sort_state = True
+
     def sort_images(self):
         if self.folder is None or self.sort_path is None:
             error = QErrorMessage()
             error.showMessage('One or more paths have not been set')
             error.exec_()
-        elif self.textbox.text == "":
+        elif self.textbox.text() == "" or self.confidence_box.text() == "":
             error = QErrorMessage()
-            error.showMessage('Threshold / distance value is not set')
+            error.showMessage('Threshold / distance /confidence value is not set')
             error.exec_()
         elif os.path.isfile(self.model):
             self.progress.setValue(0)
@@ -171,32 +232,37 @@ class ImageSorter(QWidget):
             image_list = self.identifier.get_image_list()
             image_list.sort()
             results = list()
-            if self.detect_people is True:
+            if self.detect_objects is True:
                 self.status.setText('Filtering images...')
                 utils = IU()
-                image_list = utils.detect_people(image_list,
-                                                 bar=self.progress)
-            increment = float(100.00/float(len(image_list)))
-            self.progress.setValue(0)
-            done = 0
-            self.status.setText('Sorting images...')
-            for image in image_list:
-                result = self.identifier.predict(image_path = image,
-                                                 threshold = self.threshold)
-                if self.algorithm == 'Euclidean Distance':
-                    if result is True:
-                        results.append(image)
-                elif self.algorithm == 'k-Nearest Neighbors':
-                    for name, loc in result:
-                        if name.lower() == 'search_face':
+                image_list = utils.detect_objects(image_list,
+                                                  bar=self.progress,
+                                                  classes=self.classes,
+                                                  conf=self.confidence)
+            if self.sort_state is True:
+                increment = float(100.00/float(len(image_list)))
+                self.progress.setValue(0)
+                done = 0
+                self.status.setText('Sorting images...')
+                for image in image_list:
+                    result = self.identifier.predict(image_path = image,
+                                                     threshold = self.threshold)
+                    if self.algorithm == 'Euclidean Distance':
+                        if result is True:
                             results.append(image)
-                            break
-                elif self.algorithm == 'Support Vector Machine(SVM)':
-                    if result is True:
-                        results.append(image)
-                done += increment
-                self.progress.setValue(done)
-            self.progress.setValue(100)
+                    elif self.algorithm == 'k-Nearest Neighbors':
+                        for name, loc in result:
+                            if name.lower() == 'search_face':
+                                results.append(image)
+                                break
+                    elif self.algorithm == 'Support Vector Machine(SVM)':
+                        if result is True:
+                            results.append(image)
+                    done += increment
+                    self.progress.setValue(done)
+                self.progress.setValue(100)
+            else:
+                results = image_list
             if not os.path.exists(self.sort_path):
                 os.makedirs(self.sort_path)
             self.progress.setValue(0); done = 0;

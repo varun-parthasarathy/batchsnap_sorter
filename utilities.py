@@ -79,8 +79,7 @@ class ImageUtilities(object):
         video_capture.release()
         cv2.destroyAllWindows()
 
-    # Beta - filter images by detecting people first
-    def detect_people(self, image_list, conf=0.4, bar=None):
+    def detect_objects(self, image_list, conf=0.4, bar=None, classes=None):
         net = cv2.dnn.readNetFromCaffe('models/MNSSD_deploy.prototxt.txt',
                                        'models/MNSSD_detector.caffemodel')
         CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
@@ -105,7 +104,7 @@ class ImageUtilities(object):
                 confidence = detections[0, 0, i, 2]
                 if confidence > conf:
                     idx = int(detections[0, 0, i, 1])
-                    if CLASSES[idx] == 'person':
+                    if CLASSES[idx] in classes:
                         results.append(image_path)
                         break
             if bar is not None:

@@ -143,7 +143,7 @@ class ImageSorter(QWidget):
         conf_val = QDoubleValidator()
         conf_val.setRange(0.001, 1.00, 3)
         self.confidence_box.setValidator(conf_val)
-        self.confidence_box.setText('0.4')
+        self.confidence_box.setText(str(self.confidence))
         conf_label.setText('Enter the confidence level of object detection')
         filter_label = QLabel()
         filter_label.setText('Select the objects that will be used to filter images')

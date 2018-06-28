@@ -143,31 +143,38 @@ class ImageSorter(QWidget):
         conf_val = QDoubleValidator()
         conf_val.setRange(0.001, 1.00, 3)
         self.confidence_box.setValidator(conf_val)
-        self.confidence_box.setText(str(self.confidence))
+        self.confidence_box.setText('0.4')
         conf_label.setText('Enter the confidence level of object detection')
         filter_label = QLabel()
         filter_label.setText('Select the objects that will be used to filter images')
         checker1 = QCheckBox('People')
         checker1.stateChanged.connect(lambda *f: self.detecting_objects(idx=15,
                                                                         state=checker1.checkState()))
+        if 'person' in self.classes:checker1.toggle()
         checker2 = QCheckBox('Dogs')
         checker2.stateChanged.connect(lambda *f: self.detecting_objects(idx=12,
                                                                         state=checker2.checkState()))
+        if 'dog' in self.classes:checker2.toggle()
         checker3 = QCheckBox('Cats')
         checker3.stateChanged.connect(lambda *f: self.detecting_objects(idx=8,
                                                                         state=checker3.checkState()))
+        if 'cat' in self.classes:checker3.toggle()
         checker4 = QCheckBox('Cars')
         checker4.stateChanged.connect(lambda *f: self.detecting_objects(idx=7,
                                                                         state=checker4.checkState()))
+        if 'car' in self.classes:checker4.toggle()
         checker5 = QCheckBox('Bicycles')
         checker5.stateChanged.connect(lambda *f: self.detecting_objects(idx=2,
                                                                         state=checker5.checkState()))
+        if 'bicycle' in self.classes:checker5.toggle()
         checker6 = QCheckBox('Bottles')
         checker6.stateChanged.connect(lambda *f: self.detecting_objects(idx=5,
                                                                         state=checker6.checkState()))
+        if 'bottle' in self.classes:checker6.toggle()
         checker7 = QCheckBox('Motorbikes')
         checker7.stateChanged.connect(lambda *f: self.detecting_objects(idx=14,
                                                                         state=checker7.checkState()))
+        if 'motorbike' in self.classes:checker7.toggle()
         filter_check = QCheckBox('Filter images without sorting using face recognition')
         filter_check.stateChanged.connect(self.set_sort_state)
         if self.algorithm == 'Euclidean Distance':

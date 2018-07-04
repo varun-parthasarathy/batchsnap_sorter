@@ -6,7 +6,6 @@ import math
 import pickle
 import numpy as np
 from sklearn import neighbors, svm
-import face_recognition as FR
 from utilities import ImageUtilities as IU
 
 
@@ -158,7 +157,7 @@ class EuclideanSorter(object):
                 pickle.dump(mean_encoding, file)
         return mean_encoding
 
-    def predict(self, image_path, threshold=0.6):
+    def predict(self, image_path, threshold=1.2):
         model_path = "models/predictor_euclidean_model.clf"
         model_encoding = None
         if not os.path.isfile(image_path):
@@ -177,9 +176,9 @@ class EuclideanSorter(object):
             face = image[y:b, x:a]
             encode = self.utils.face_encodings(image, align=True)
             faces_encodings.append(encode[0])
-        results = FR.compare_faces(encodings,
-                                   model_encoding,
-                                   tolerance=threshold)
+        results = self.utils.compare_faces(faces_encodings,
+                                           model_encoding,
+                                           tolerance=threshold)
         if True in results:
             return True
         else:
@@ -197,5 +196,3 @@ class EuclideanSorter(object):
             sys.exit(0)
         images_list.sort()
         return images_list
-
-    

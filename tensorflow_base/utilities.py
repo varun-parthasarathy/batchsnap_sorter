@@ -1,12 +1,13 @@
 import cv2
 import numpy as np
+import dlib
 from shutil import rmtree
 import os
 import pickle
 import tensorflow as tf
 from PIL import Image
 from facenet import facenet
-from facenet.align import detect_face
+import face_recognition_models as FRM
 
 
 class ImageUtilities(object):
@@ -143,35 +144,27 @@ class ImageUtilities(object):
         
         return y
 
-    def align_face(self, image, margin=44, size=182):
-        minsize = 20
-        threshold = [0.6, 0.7, 0.7]
-        factor = 0.709
-        with tf.Graph().as_default():
-            session = tf.Session()
-            with session.as_default():
-                pnet, rnet, onet = detect_face.create_mtcnn(session, None)
-        bounding_boxes, _ = detect_face.detect_face(image, minsize, pnet,
-                                                    rnet, onet,
-                                                    threshold,
-                                                    factor)
-        if bounding_boxes.shape[0] > 0:
-            det = bounding_boxes[:, 0:4]
-            det_arr = []
-            img_size = np.asarray(image.shape)[0:2]
-            det_arr.append(np.squeeze(det))
-
-            for i, det in enumerate(det_arr):
-                det = np.squeeze(det)
-                bb = np.zeros(4, dtype=np.int32)
-                bb[0] = np.maximum(det[0] - margin/2, 0)
-                bb[1] = np.maximum(det[1] - margin/2, 0)
-                bb[2] = np.minimum(det[2] + margin/2, img_size[1])
-                bb[3] = np.minimum(det[3] + margin/2, img_size[0])
-                cropped = image[bb[1]:bb[3], bb[0]:bb[2], :]
-                scaled = cv2.resize(cropped, (size, size))
-
-        aligned = np.asarray(scaled)
+    def align_face(self, image):
+        faces = dlib.full_object_detections()
+        (h, w) = image.shape[:2]
+        loc = dlib.rectangle(h, w, 0, 0)
+        model = FRM.pose_predictor_five_point_model_location()
+        sp = dlib.shape_predictor(model)
+        faces.append(sp(image, loc))
+        aligned = dlib.get_face_chip(image, faces[0],
+                                     size=160)
 
         return aligned
-                
+
+    def face_distance(self, face_encodings, face_to_compare):
+        if len(face_encodings) == 0:
+            return np.empty((0))
+        
+        return np.linalg.norm(face_encodings - face_to_compare, axis = 1)
+
+    def compare_faces(self, known_encodings, face_encoding, tolerance=1.2):
+        distances = self.face_distance(known_encodings,
+                                       face_encoding)
+        
+        return list(distances <= tolerance)
+

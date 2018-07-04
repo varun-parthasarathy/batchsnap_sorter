@@ -174,7 +174,7 @@ class EuclideanSorter(object):
             return False
         faces_encodings = list()
         for (x, y, a, b) in locs:
-            face = X_img[y:b, x:a]
+            face = image[y:b, x:a]
             encode = self.utils.face_encodings(image, align=True)
             faces_encodings.append(encode[0])
         results = FR.compare_faces(encodings,

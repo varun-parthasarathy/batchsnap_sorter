@@ -53,7 +53,7 @@ class KNNSorter(object):
         faces_encodings = list()
         for (x, y, a, b) in X_face_locations:
             face = X_img[y:b, x:a]
-            encode = self.utils.face_encodings(X_img, align=True)
+            encode = self.utils.face_encodings(X_img)
             faces_encodings.append(encode[0])
         closest_distances = knn_clf.kneighbors(faces_encodings, n_neighbors=1)
         are_matches = [closest_distances[0][i][0] <= threshold for i in range(len(X_face_locations))]
@@ -115,7 +115,7 @@ class SVMSorter(object):
         faces_encodings = list()
         for (x, y, a, b) in X_face_locations:
             face = X_img[y:b, x:a]
-            encode = self.utils.face_encodings(X_img, align=True)
+            encode = self.utils.face_encodings(X_img)
             faces_encodings.append(encode[0])
         distances = svm_clf.decision_function(faces_encodings)
         for distance in distances:
@@ -174,7 +174,7 @@ class EuclideanSorter(object):
         faces_encodings = list()
         for (x, y, a, b) in locs:
             face = image[y:b, x:a]
-            encode = self.utils.face_encodings(image, align=True)
+            encode = self.utils.face_encodings(image)
             faces_encodings.append(encode[0])
         results = self.utils.compare_faces(faces_encodings,
                                            model_encoding,

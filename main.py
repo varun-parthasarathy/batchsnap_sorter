@@ -24,11 +24,11 @@ class ImageSorter(QWidget):
         self.model = 'models/predictor_euclidean_model.clf'
         self.textbox = None
         self.confidence_box = None
-        self.threshold = 0.6
+        self.threshold = 1.2
         self.detect_objects = False
         self.sort_state = True
         self.confidence = 0.4
-        self.classes = list()
+        self.classes = set()
 
         self.label1 = QLabel()
         self.label2 = QLabel()
@@ -92,11 +92,11 @@ class ImageSorter(QWidget):
         if self.algorithm == 'Euclidean Distance':
             self.identifier = EuclideanSorter()
             self.model = 'models/predictor_euclidean_model.clf'
-            self.threshold = 0.6
+            self.threshold = 1.2
         elif self.algorithm == 'k-Nearest Neighbors':
             self.identifier = KNNSorter()
             self.model = 'models/predictor_knn_model.clf'
-            self.threshold = 0.6
+            self.threshold = 1.0
         elif self.algorithm == 'Support Vector Machine(SVM)':
             self.identifier = SVMSorter()
             self.model = 'models/predictor_svm_model.clf'
@@ -117,7 +117,7 @@ class ImageSorter(QWidget):
             self.threshold = float(self.textbox.text())
             self.confidence = float(self.confidence_box.text())
         except:
-            self.threshold = 0.6
+            self.threshold = 1.0
             self.confidence = 0.4
 
     def detecting_objects(self, state, idx=15):
@@ -127,7 +127,7 @@ class ImageSorter(QWidget):
 	"sofa", "train", "tvmonitor"]
         if state == Qt.Checked:
             self.detect_objects = True
-            self.classes.append(CLASSES[idx])
+            self.classes.add(CLASSES[idx])
         else:
             try:
                 self.classes.remove(CLASSES[idx])
@@ -147,7 +147,7 @@ class ImageSorter(QWidget):
         conf_val = QDoubleValidator()
         conf_val.setRange(0.001, 1.00, 3)
         self.confidence_box.setValidator(conf_val)
-        self.confidence_box.setText('0.4')
+        self.confidence_box.setText(str(self.confidence))
         conf_label.setText('Enter the confidence level of object detection')
         filter_label = QLabel()
         filter_label.setText('Select the objects that will be used to filter images')
@@ -182,11 +182,11 @@ class ImageSorter(QWidget):
         filter_check = QCheckBox('Filter images without sorting using face recognition')
         filter_check.stateChanged.connect(self.set_sort_state)
         if self.algorithm == 'Euclidean Distance':
-            valid.setRange(0.005, 1.00, 3)
+            valid.setRange(0.5, 2.00, 3)
             self.textbox.setValidator(valid)
             label.setText('Enter an error threshold')
         elif self.algorithm == 'k-Nearest Neighbors':
-            valid.setRange(0.005, 1.00, 3)
+            valid.setRange(0.5, 2.00, 3)
             self.textbox.setValidator(valid)
             label.setText('Enter an error threshold')
         elif self.algorithm == 'Support Vector Machine(SVM)':

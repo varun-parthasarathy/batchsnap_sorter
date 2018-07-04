@@ -28,7 +28,7 @@ class ImageSorter(QWidget):
         self.detect_objects = False
         self.sort_state = True
         self.confidence = 0.4
-        self.classes = list()
+        self.classes = set()
 
         self.label1 = QLabel()
         self.label2 = QLabel()
@@ -96,7 +96,7 @@ class ImageSorter(QWidget):
         elif self.algorithm == 'k-Nearest Neighbors':
             self.identifier = KNNSorter()
             self.model = 'models/predictor_knn_model.clf'
-            self.threshold = 0.6
+            self.threshold = 1.0
         elif self.algorithm == 'Support Vector Machine(SVM)':
             self.identifier = SVMSorter()
             self.model = 'models/predictor_svm_model.clf'
@@ -117,7 +117,7 @@ class ImageSorter(QWidget):
             self.threshold = float(self.textbox.text())
             self.confidence = float(self.confidence_box.text())
         except:
-            self.threshold = 0.6
+            self.threshold = 1.0
             self.confidence = 0.4
 
     def detecting_objects(self, state, idx=15):
@@ -127,7 +127,7 @@ class ImageSorter(QWidget):
 	"sofa", "train", "tvmonitor"]
         if state == Qt.Checked:
             self.detect_objects = True
-            self.classes.append(CLASSES[idx])
+            self.classes.add(CLASSES[idx])
         else:
             try:
                 self.classes.remove(CLASSES[idx])
@@ -186,7 +186,7 @@ class ImageSorter(QWidget):
             self.textbox.setValidator(valid)
             label.setText('Enter an error threshold')
         elif self.algorithm == 'k-Nearest Neighbors':
-            valid.setRange(0.005, 1.00, 3)
+            valid.setRange(0.5, 2.00, 3)
             self.textbox.setValidator(valid)
             label.setText('Enter an error threshold')
         elif self.algorithm == 'Support Vector Machine(SVM)':

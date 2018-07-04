@@ -113,8 +113,12 @@ class ImageSorter(QWidget):
             error.exec_()
 
     def set_options(self):
-        self.threshold = float(self.textbox.text())
-        self.confidence = float(self.confidence_box.text())
+        try:
+            self.threshold = float(self.textbox.text())
+            self.confidence = float(self.confidence_box.text())
+        except:
+            self.threshold = 0.6
+            self.confidence = 0.4
 
     def detecting_objects(self, state, idx=15):
         CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
@@ -228,10 +232,6 @@ class ImageSorter(QWidget):
         if self.folder is None or self.sort_path is None:
             error = QErrorMessage()
             error.showMessage('One or more paths have not been set')
-            error.exec_()
-        elif self.textbox.text() == "" or self.confidence_box.text() == "":
-            error = QErrorMessage()
-            error.showMessage('Threshold / distance /confidence value is not set')
             error.exec_()
         elif os.path.isfile(self.model):
             self.progress.setValue(0)

@@ -190,7 +190,7 @@ class ImageSorter(QWidget):
             self.textbox.setValidator(valid)
             label.setText('Enter an error threshold')
         elif self.algorithm == 'Support Vector Machine(SVM)':
-            valid.setRange(0.00005, 0.0100, 5)
+            valid.setRange(0.00005, 2.00, 5)
             self.textbox.setValidator(valid)
             label.setText('Enter a distance threshold')
         self.textbox.setText(str(self.threshold))

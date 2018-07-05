@@ -6,6 +6,7 @@ import sys
 from shutil import copy
 from PIL import Image
 import numpy as np
+import pickle
 from utilities import ImageUtilities as IU
 from processing import SVMSorter, KNNSorter, EuclideanSorter
 
@@ -29,6 +30,11 @@ class ImageSorter(QWidget):
         self.sort_state = True
         self.confidence = 0.4
         self.classes = set()
+
+        self.face_model = 'hog'
+        self.encoding_model = '128D'
+        self.jitters = 3
+        self.upsample = 1
 
         self.label1 = QLabel()
         self.label2 = QLabel()
@@ -65,7 +71,10 @@ class ImageSorter(QWidget):
 
     def generate_training_set(self):
         utils = IU()
-        utils.generate_training_set()
+        utils.generate_training_set(encoder=self.encoding_model,
+                                    jitters=self.jitters,
+                                    face_model=self.face_model,
+                                    scaleup=self.upsample)
 
     def get_folder_path(self):
         folder_path = QFileDialog()
@@ -116,9 +125,13 @@ class ImageSorter(QWidget):
         try:
             self.threshold = float(self.textbox.text())
             self.confidence = float(self.confidence_box.text())
+            self.jitters = int(self.jitter_text.text())
+            self.upsample = int(self.upsamples.text())
         except:
             self.threshold = 1.0
             self.confidence = 0.4
+            self.jitters = 3
+            self.upsample = 1
 
     def detecting_objects(self, state, idx=15):
         CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
@@ -136,6 +149,18 @@ class ImageSorter(QWidget):
             if len(self.classes) == 0:
                 self.detect_objects = False
 
+    def set_face_detector(self, index):
+        if index == 0:
+            self.face_model = 'hog'
+        else:
+            self.face_model = 'cnn'
+
+    def set_encoding_model(self, index):
+        if index == 0:
+            self.encoding_model = '128D'
+        else:
+            self.encoding_model = '512D'
+
     def advanced_options(self):
         settings = QDialog()
         settings.setGeometry(600, 600, 300, 300)
@@ -144,10 +169,30 @@ class ImageSorter(QWidget):
         conf_label = QLabel()
         label = QLabel()
         valid = QDoubleValidator()
+        face_options = QComboBox()
+        face_options.addItems(['HOG + SVM (faster, less accurate)',
+                               'CNN (slower, more accurate, GPU recommended)'])
+        face_options.currentIndexChanged.connect(self.set_face_detector)
+        if self.face_model == 'cnn':
+            face_options.setCurrentIndex(1)
         conf_val = QDoubleValidator()
         conf_val.setRange(0.001, 1.00, 3)
+        encoding_options = QComboBox()
+        encoding_options.addItems(['128D (faster)',
+                                   '512D (slower, more accurate)'])
+        encoding_options.currentIndexChanged.connect(self.set_encoding_model)
+        if self.encoding_model == '512D':
+            encoding_options.setCurrentIndex(1)
         self.confidence_box.setValidator(conf_val)
         self.confidence_box.setText(str(self.confidence))
+        jitter_val = QIntValidator()
+        jitter_val.setRange(1, 200)
+        self.jitter_text = QLineEdit()
+        self.upsamples = QLineEdit()
+        self.jitter_text.setValidator(jitter_val)
+        self.upsamples.setValidator(jitter_val)
+        self.jitter_text.setText(str(self.jitters))
+        self.upsamples.setText(str(self.upsample))
         conf_label.setText('Enter the confidence level of object detection')
         filter_label = QLabel()
         filter_label.setText('Select the objects that will be used to filter images')
@@ -196,10 +241,19 @@ class ImageSorter(QWidget):
         self.textbox.setText(str(self.threshold))
         button1 = QPushButton('Generate training data')
         button2 = QPushButton('Train classifier')
-        button3 = QPushButton('Set threshold and confidence')
+        button3 = QPushButton('Set options')
         button1.clicked.connect(self.generate_training_set)
         button2.clicked.connect(self.train_classifier)
         button3.clicked.connect(self.set_options)
+        label1 = QLabel()
+        label1.setText('Select the face detection model to use')
+        label2 = QLabel()
+        label2.setText('Select the encoding model to use')
+        label3 = QLabel()
+        label3.setText('Select the number of random operations to \
+be performed on the image')
+        label4 = QLabel()
+        label4.setText('Select the number of times to scale up the image')
         dialog = QVBoxLayout()
         dialog.addWidget(filter_label)
         dialog.addWidget(checker1)
@@ -213,10 +267,18 @@ class ImageSorter(QWidget):
         dialog.addWidget(self.confidence_box)
         dialog.addWidget(label)
         dialog.addWidget(self.textbox)
-        dialog.addWidget(button3)
         dialog.addWidget(filter_check)
         dialog.addWidget(button1)
         dialog.addWidget(button2)
+        dialog.addWidget(label1)
+        dialog.addWidget(face_options)
+        dialog.addWidget(label2)
+        dialog.addWidget(encoding_options)
+        dialog.addWidget(label3)
+        dialog.addWidget(self.jitter_text)
+        dialog.addWidget(label4)
+        dialog.addWidget(self.upsamples)
+        dialog.addWidget(button3)
         settings.setWindowTitle('Advanced Options')
         settings.setLayout(dialog)
         settings.setWindowModality(Qt.ApplicationModal)
@@ -234,53 +296,69 @@ class ImageSorter(QWidget):
             error.showMessage('One or more paths have not been set')
             error.exec_()
         elif os.path.isfile(self.model):
-            self.progress.setValue(0)
-            self.identifier.set_folder(self.folder)
-            image_list = self.identifier.get_image_list()
-            image_list.sort()
-            results = list()
-            if self.detect_objects is True:
-                self.status.setText('Filtering images...')
-                utils = IU()
-                image_list = utils.detect_objects(image_list,
-                                                  bar=self.progress,
-                                                  classes=self.classes,
-                                                  conf=self.confidence)
-            if self.sort_state is True:
-                increment = float(100.00/float(len(image_list)))
-                self.progress.setValue(0)
-                done = 0
-                self.status.setText('Sorting images...')
-                for image in image_list:
-                    result = self.identifier.predict(image_path = image,
-                                                     threshold = self.threshold)
-                    if self.algorithm == 'Euclidean Distance':
-                        if result is True:
-                            results.append(image)
-                    elif self.algorithm == 'k-Nearest Neighbors':
-                        for name, loc in result:
-                            if name.lower() == 'search_face':
-                                results.append(image)
-                                break
-                    elif self.algorithm == 'Support Vector Machine(SVM)':
-                        if result is True:
-                            results.append(image)
-                    done += increment
-                    self.progress.setValue(done)
-                self.progress.setValue(100)
-            else:
-                results = image_list
-            if not os.path.exists(self.sort_path):
-                os.makedirs(self.sort_path)
-            self.progress.setValue(0); done = 0;
-            self.status.setText('Copying results to folder...')
-            increment = float(len(results) / 100.0)
-            for image in results:
-                copy(image, self.sort_path)
-                done += increment
-                self.progress.setValue(done)
-            self.progress.setValue(100)
-            self.status.setText('Done!')
+            if os.path.isfile('models/training_data.clf'):
+                with open('models/training_data.clf', 'rb') as file:
+                    data = pickle.load(file)
+                if 512 in data[0].shape and self.encoding_model == '128D':
+                    error = QErrorMessage()
+                    error.showMessage('The training data is 512D but model is 128D; they are incompatible')
+                    error.exec_()
+                elif 128 in data[0].shape and self.encoding_model == '512D':
+                    error = QErrorMessage()
+                    error.showMessage('The training data is 128D but model is 512D; they are incompatible')
+                    error.exec_()
+                else:                    
+                    self.progress.setValue(0)
+                    self.identifier.set_params(self.face_model,
+                                               self.encoding_model,
+                                               self.jitters,
+                                               self.upsample)
+                    self.identifier.set_folder(self.folder)
+                    image_list = self.identifier.get_image_list()
+                    image_list.sort()
+                    results = list()
+                    if self.detect_objects is True:
+                        self.status.setText('Filtering images...')
+                        utils = IU()
+                        image_list = utils.detect_objects(image_list,
+                                                          bar=self.progress,
+                                                          classes=self.classes,
+                                                          conf=self.confidence)
+                    if self.sort_state is True:
+                        increment = float(100.00/float(len(image_list)))
+                        self.progress.setValue(0)
+                        done = 0
+                        self.status.setText('Sorting images...')
+                        for image in image_list:
+                            result = self.identifier.predict(image_path = image,
+                                                             threshold = self.threshold)
+                            if self.algorithm == 'Euclidean Distance':
+                                if result is True:
+                                    results.append(image)
+                            elif self.algorithm == 'k-Nearest Neighbors':
+                                for name, loc in result:
+                                    if name.lower() == 'search_face':
+                                        results.append(image)
+                                        break
+                            elif self.algorithm == 'Support Vector Machine(SVM)':
+                                if result is True:
+                                    results.append(image)
+                            done += increment
+                            self.progress.setValue(done)
+                        self.progress.setValue(100)
+                    else:
+                        results = image_list
+                    if not os.path.exists(self.sort_path):
+                        os.makedirs(self.sort_path)
+                    self.progress.setValue(0); done = 0;
+                    self.status.setText('Copying results to folder...')
+                    increment = float(len(results) / 100.0)
+                    for image in results:
+                        copy(image, self.sort_path)
+                        done += increment
+                        self.progress.setValue(done)
+                    self.progress.setValue(100)
+                    self.status.setText('Done!')
         else:
             error = QErrorMessage()
             error.showMessage("There was an error. That's all we know.")

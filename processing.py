@@ -1,12 +1,11 @@
 import os
 import cv2
 import sys
-import glob
+import re
 import math
 import pickle
 import numpy as np
 from sklearn import neighbors, svm
-import face_recognition as FR
 from utilities import ImageUtilities as IU
 
 
@@ -15,9 +14,19 @@ class KNNSorter(object):
     def __init__(self):
         self.folder = None
         self.utils = IU()
+        self.face_model = 'hog'
+        self.encoding_model = '128D'
+        self.jitters = 3
+        self.upsample = 1
 
     def set_folder(self, folder):
         self.folder = folder
+
+    def set_params(self, model, encoding, jitters, upsample):
+        self.face_model = model
+        self.encoding_model = encoding
+        self.jitters = jitters
+        self.upsample = upsample
 
     def train(self, n_neighbors=None, knn_algo='ball_tree'):
         X = []
@@ -48,12 +57,18 @@ class KNNSorter(object):
             with open(model_path, 'rb') as f:
                 knn_clf = pickle.load(f)
         X_img = cv2.imread(image_path)
-        X_face_locations = self.utils.get_face_locations(image=X_img)
+        X_face_locations = self.utils.get_face_locations(image=X_img,
+                                                         model=self.face_model,
+                                                         scaleup=self.upsample)
         if len(X_face_locations) == 0:
             return []
-        faces_encodings = FR.face_encodings(X_img,
-                                            known_face_locations=X_face_locations,
-                                            num_jitters=10)
+        faces_encodings = list()
+        for (x, y, a, b) in X_face_locations:
+            face = X_img[y:b, x:a]
+            encode = self.utils.face_encodings(face,
+                                               model=self.encoding_model,
+                                               jitters=self.jitters)
+            faces_encodings.append(encode[0])
         closest_distances = knn_clf.kneighbors(faces_encodings, n_neighbors=1)
         are_matches = [closest_distances[0][i][0] <= threshold for i in range(len(X_face_locations))]
         return [(pred, loc) if rec else ("unknown", loc) for pred, loc, rec in zip(knn_clf.predict(faces_encodings), X_face_locations, are_matches)]
@@ -61,10 +76,9 @@ class KNNSorter(object):
     def get_image_list(self):
         images_list = list()
         try:
-            for path in glob.glob(os.path.join(self.folder, "*.jpg")):
-                images_list.append(path)
-            for path in glob.glob(os.path.join(self.folder, "*.png")):
-                images_list.append(path)
+            for path in os.listdir(self.folder):
+                if re.match('.*\.(jpg|png)', path.lower()):
+                    images_list.append(os.path.join(self.folder, path))
         except:
             print("Error - folder or file path is invalid")
             sys.exit(0)
@@ -77,9 +91,19 @@ class SVMSorter(object):
     def __init__(self):
         self.folder = None
         self.utils = IU()
+        self.face_model = 'hog'
+        self.encoding_model = '128D'
+        self.jitters = 3
+        self.upsample = 1
 
     def set_folder(self, folder):
         self.folder = folder
+
+    def set_params(self, model, encoding, jitters, upsample):
+        self.face_model = model
+        self.encoding_model = encoding
+        self.jitters = jitters
+        self.upsample = upsample
 
     def train(self):
         X = []
@@ -108,12 +132,18 @@ class SVMSorter(object):
             with open(model_path, 'rb') as f:
                 svm_clf = pickle.load(f)
         X_img = cv2.imread(image_path)
-        X_face_locations = self.utils.get_face_locations(image=X_img)
+        X_face_locations = self.utils.get_face_locations(image=X_img,
+                                                         model=self.face_model,
+                                                         scaleup=self.upsample)
         if len(X_face_locations) == 0:
             return False
-        faces_encodings = FR.face_encodings(X_img,
-                                            known_face_locations=X_face_locations,
-                                            num_jitters=10)
+        faces_encodings = list()
+        for (x, y, a, b) in X_face_locations:
+            face = X_img[y:b, x:a]
+            encode = self.utils.face_encodings(face,
+                                               model=self.encoding_model,
+                                               jitters=self.jitters)
+            faces_encodings.append(encode[0])
         distances = svm_clf.decision_function(faces_encodings)
         for distance in distances:
             if distance < threshold or distance > 0:
@@ -123,10 +153,9 @@ class SVMSorter(object):
     def get_image_list(self):
         images_list = list()
         try:
-            for path in glob.glob(os.path.join(self.folder, "*.jpg")):
-                images_list.append(path)
-            for path in glob.glob(os.path.join(self.folder, "*.png")):
-                images_list.append(path)
+            for path in os.listdir(self.folder):
+                if re.match('.*\.(jpg|png)', path.lower()):
+                    images_list.append(os.path.join(self.folder, path))
         except:
             print("Error - folder or file path is invalid")
             sys.exit(0)
@@ -139,9 +168,19 @@ class EuclideanSorter(object):
     def __init__(self):
         self.utils = IU()
         self.folder = None
+        self.face_model = 'hog'
+        self.encoding_model = '128D'
+        self.jitters = 3
+        self.upsample = 1
 
     def set_folder(self, folder):
         self.folder = folder
+
+    def set_params(self, model, encoding, jitters, upsample):
+        self.face_model = model
+        self.encoding_model = encoding
+        self.jitters = jitters
+        self.upsample = upsample
 
     def train(self):
         model_save_path = "models/predictor_euclidean_model.clf"
@@ -154,7 +193,7 @@ class EuclideanSorter(object):
                 pickle.dump(mean_encoding, file)
         return mean_encoding
 
-    def predict(self, image_path, threshold=0.6):
+    def predict(self, image_path, threshold=1.2):
         model_path = "models/predictor_euclidean_model.clf"
         model_encoding = None
         if not os.path.isfile(image_path):
@@ -165,15 +204,21 @@ class EuclideanSorter(object):
             with open(model_path, 'rb') as f:
                 model_encoding = pickle.load(f)
         image = cv2.imread(image_path)
-        locs = self.utils.get_face_locations(image=image)
+        locs = self.utils.get_face_locations(image=image,
+                                             model=self.face_model,
+                                             scaleup=self.upsample)
         if len(locs) == 0:
             return False
-        encodings = FR.face_encodings(image[:, :, ::-1],
-                                           known_face_locations=locs,
-                                           num_jitters=10)
-        results = FR.compare_faces(encodings,
-                                   model_encoding,
-                                   tolerance=threshold)
+        faces_encodings = list()
+        for (x, y, a, b) in locs:
+            face = image[y:b, x:a]
+            encode = self.utils.face_encodings(face,
+                                               model=self.encoding_model,
+                                               jitters=self.jitters)
+            faces_encodings.append(encode[0])
+        results = self.utils.compare_faces(faces_encodings,
+                                           model_encoding,
+                                           tolerance=threshold)
         if True in results:
             return True
         else:
@@ -182,14 +227,11 @@ class EuclideanSorter(object):
     def get_image_list(self):
         images_list = list()
         try:
-            for path in glob.glob(os.path.join(self.folder, "*.jpg")):
-                images_list.append(path)
-            for path in glob.glob(os.path.join(self.folder, "*.png")):
-                images_list.append(path)
+            for path in os.listdir(self.folder):
+                if re.match('.*\.(jpg|png)', path.lower()):
+                    images_list.append(os.path.join(self.folder, path))
         except:
             print("Error - folder or file path is invalid")
             sys.exit(0)
         images_list.sort()
         return images_list
-
-    

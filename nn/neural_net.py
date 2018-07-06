@@ -36,6 +36,7 @@ class NNSorter(object):
         model = Sequential()
         model.add(Dense(self.neurons+4, input_dim=self.neurons,
                         activation='relu'))
+        model.add(Dropout(0.2, noise_shape=None, seed=None))
         model.add(Dense(int((self.neurons*2)/3), activation='relu'))
         model.add(Dense(1, activation='sigmoid'))
         model.compile(loss='binary_crossentropy',

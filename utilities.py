@@ -25,7 +25,8 @@ class ImageUtilities(object):
                                   number_of_times_to_upsample=scaleup,
                                   model=model)
         for (t, r, b, l) in faces:
-            sX = l; sY = t; eX = r; eY = b;
+            sX = int(l*2.5); sY = int(t*2.5);
+            eX = int(r*2.5); eY = int(b*2.5);
             locs.append((sX, sY, eX, eY))
 
         return locs

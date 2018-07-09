@@ -10,7 +10,7 @@ from utilities import ImageUtilities as IU
 
 class NNSorter(object):
 
-    def __init__(self, model='128D'):
+    def __init__(self, model='128D', hidden=0.8):
         if model == '128D':
             self.neurons = 128
         else:
@@ -22,6 +22,7 @@ class NNSorter(object):
         self.encoding_model = '128D'
         self.jitters = 3
         self.upsample = 1
+        self.hidden = hidden
 
     def set_folder(self, folder):
         self.folder = folder
@@ -36,8 +37,8 @@ class NNSorter(object):
         model = Sequential()
         model.add(Dense(self.neurons+4, input_dim=self.neurons,
                         activation='relu'))
-        model.add(Dropout(0.2, noise_shape=None, seed=None))
-        model.add(Dense(int((self.neurons*2)/3), activation='relu'))
+        model.add(Dropout(0.3, noise_shape=None, seed=None))
+        model.add(Dense(int(self.neurons*self.hidden), activation='relu'))
         model.add(Dense(1, activation='sigmoid'))
         model.compile(loss='binary_crossentropy',
                       optimizer='adam',
@@ -55,7 +56,7 @@ class NNSorter(object):
         for i in range(len(X1)):
             y.append(0)
         y = np.asarray(y)
-        model.fit(data, y, epochs=200, batch_size=5)
+        model.fit(data, y, epochs=199, batch_size=5)
         model.save('models/predictor_NN_model.h5')
 
         return model

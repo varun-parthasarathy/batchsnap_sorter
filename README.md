@@ -38,17 +38,16 @@ The script `main_dlib.py` does the same thing as `main.py`, except that it only 
 This script allows you to generate training data without a webcam. All you have to do is select images of yourself from your computer, and click on 'Generate training data'. Once this is done, you can run `main.py` and train your classifiers.
 
 ### Advanced settings
-Once you are familiar with the interface, you can make more changes to the application settings, such as-
-_Face detection model_ - The face detection model to use. Default is HOG+SVM, which is faster than the CNN method, but is less accurate.
-                         The CNN method is best suited to machines that have a GPU and enough RAM (atleast 6 GB)
+Once you are familiar with the interface, you can make more changes to the application settings, such as-  
+_Face detection model_ - The face detection model to use. Default is HOG+SVM, which is faster than the CNN method, but is less accurate.                          The CNN method is best suited to machines that have a GPU and enough RAM (atleast 6 GB)  
 _Face encoding model_  - The face encoding model to use. Default is dlib's 128D model. The FaceNet model generates 512D encodings of 
                          faces instead, which gives greater accuracy, but as expected, is much slower. The 128D model and the 512D model 
                          are incompatible with each other, so if you change this setting, you will need to recreate training data and
-                         retrain the classifiers.
+                         retrain the classifiers.  
 _Random operations_    - Specify the number of random operations to be performed on each face. Default is 3. Greater the number, higher
-                         the accuracy, and slower the code. For example, a value of 10 makes the code ten times slower.
+                         the accuracy, and slower the code. For example, a value of 10 makes the code ten times slower.  
 _Scale up image_       - Number of times to scale up the image while looking for faces. Default is 1. This allows smaller faces to be
-                         detected in an image.
+                         detected in an image.  
 _Error threshold_      - Set the error threshold for each classifier. If using the 512D model, the thresholds must be made double their
                          previous value. A larger threshold means more false positives, while a lower threshold restricts the number of
                          matches found.

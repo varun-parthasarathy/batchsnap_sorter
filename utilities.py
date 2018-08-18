@@ -16,8 +16,19 @@ class ImageUtilities(object):
     def __init__(self):
         pass
 
+    def equalize(self, image):
+        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l1 = clahe.apply(l)
+        processed = cv2.merge((l1, a, b))
+        processed = cv2.cvtColor(processed, cv2.COLOR_LAB2BGR)
+
+        return processed
+
     def get_face_locations(self, image, model='hog', scaleup=1):
         locs = list()
+        image = self.equalize(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         (h, w) = image.shape[:2]
         image = cv2.resize(image, (int(w*0.4), int(h*0.4)))
@@ -40,6 +51,7 @@ class ImageUtilities(object):
             ret, frame = video_capture.read()
             if not ret:
                 continue
+            frame = self.equalize(frame)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             orig = frame.copy()
             locations = self.get_face_locations(frame,
@@ -117,6 +129,7 @@ class ImageUtilities(object):
     def face_encodings(self, image, model='128D', jitters=3,
                        prewhiten=True, align=False):
         image = cv2.resize(image, (160, 160))
+        image = self.equalize(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if align is True:
             image = self.align_face(image)

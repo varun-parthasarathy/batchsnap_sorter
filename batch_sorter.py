@@ -4,7 +4,7 @@ import face_recognition as FR
 import pickle
 import os
 import re
-from sklearn.cluster import DBSCAN, KMeans
+from hdbscan import HDBSCAN
 from sklearn.decomposition import IncrementalPCA as IPCA
 from imutils import build_montages
 
@@ -68,7 +68,7 @@ class BatchSorter(object):
         X = np.vstack(encodings)
         pca = IPCA()#n_components='mle', svd_solver='full')
         X_new = pca.fit_transform(X)
-        clt = DBSCAN(metric='euclidean', n_jobs=-1, eps=0.36)
+        clt = HDBSCAN(metric='euclidean', min_cluster_size=5)
         clt.fit(X_new)
 
         labelIDs = np.unique(clt.labels_)

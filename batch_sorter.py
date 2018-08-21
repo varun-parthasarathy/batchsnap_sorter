@@ -5,7 +5,7 @@ import pickle
 import os
 import re
 from hdbscan import HDBSCAN
-from sklearn.decomposition import IncrementalPCA as IPCA
+from sklearn.decomposition import PCA
 from imutils import build_montages
 
 
@@ -66,7 +66,7 @@ class BatchSorter(object):
         data = np.array(data)
         encodings = [d['encoding'] for d in data]
         X = np.vstack(encodings)
-        pca = IPCA()#n_components='mle', svd_solver='full')
+        pca = PCA(n_components='mle', svd_solver='full')
         X_new = pca.fit_transform(X)
         clt = HDBSCAN(metric='euclidean', min_cluster_size=5)
         clt.fit(X_new)

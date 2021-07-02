@@ -68,7 +68,7 @@ class BatchSorter(object):
         X = np.vstack(encodings)
         pca = PCA(n_components='mle', svd_solver='full')
         X_new = pca.fit_transform(X)
-        clt = HDBSCAN(metric='euclidean', min_cluster_size=5)
+        clt = HDBSCAN(metric='euclidean', min_cluster_size=10)
         clt.fit(X_new)
 
         labelIDs = np.unique(clt.labels_)

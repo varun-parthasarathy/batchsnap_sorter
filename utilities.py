@@ -6,10 +6,28 @@ import os
 import pickle
 import tensorflow as tf
 from PIL import Image
-from facenet import facenet
 import face_recognition_models as FRM
 import face_recognition as FR
+from tensorflow.python.training import training
+from tensorflow.python.platform import gfile
 
+def load_model(model, input_map=None):
+    model_exp = os.path.expanduser(model)
+    if (os.path.isfile(model_exp)):
+        print('Model filename: %s' % model_exp)
+        with gfile.FastGFile(model_exp,'rb') as f:
+            graph_def = tf.compat.v1.GraphDef()
+            graph_def.ParseFromString(f.read())
+            tf.import_graph_def(graph_def, input_map=input_map, name='')
+    else:
+        print('Model directory: %s' % model_exp)
+        meta_file, ckpt_file = get_model_filenames(model_exp)
+        
+        print('Metagraph file: %s' % meta_file)
+        print('Checkpoint file: %s' % ckpt_file)
+      
+        saver = tf.train.import_meta_graph(os.path.join(model_exp, meta_file), input_map=input_map)
+        saver.restore(tf.get_default_session(), os.path.join(model_exp, ckpt_file))
 
 class ImageUtilities(object):
 
@@ -137,13 +155,13 @@ class ImageUtilities(object):
             if prewhiten is True:
                 image = self.prewhiten(image)
             with tf.Graph().as_default():
-                with tf.Session() as session:
-                    facenet.load_model('models/20180402-114759.pb')
-                    img_holder = tf.get_default_graph().get_tensor_by_name(
+                with tf.compat.v1.Session() as session:
+                    load_model('models/20180402-114759.pb')
+                    img_holder = tf.compat.v1.get_default_graph().get_tensor_by_name(
                         'input:0')
-                    embeddings = tf.get_default_graph().get_tensor_by_name(
+                    embeddings = tf.compat.v1.get_default_graph().get_tensor_by_name(
                         'embeddings:0')
-                    phase_train = tf.get_default_graph().get_tensor_by_name(
+                    phase_train = tf.compat.v1.get_default_graph().get_tensor_by_name(
                         'phase_train:0')
                     feed_dict = {img_holder:[image], phase_train:False}
                     encoding = session.run(embeddings, feed_dict = feed_dict)
